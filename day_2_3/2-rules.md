@@ -11,5 +11,3 @@
 - Không thể có `&mut T` và `&T` cùng lúc
 
 ## Tính thời điểm (cùng lúc): là khoảng thời gian từ khi biến được khai báo đến thòi điểm cuối cùng sử dụng của biến (last used)
-
-Smart Pointer

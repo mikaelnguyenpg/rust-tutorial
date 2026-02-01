@@ -1,0 +1,1 @@
+fn smart_pointer() {}
