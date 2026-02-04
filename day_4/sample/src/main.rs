@@ -1,38 +1,56 @@
-use std::{fmt::Display, rc::Rc};
+use std::{fmt::Display, ops::AddAssign, rc::Rc};
 
 fn main() {
-    let n = 9;
-    let n1 = n;
+    // let n = 9;
+    // let n1 = n;
 
-    // Result
-    let p = PersonType::Pupil(Person {
-        age: 15,
-        name: "A".to_string(),
-    });
-    let result = function_result(p);
-    if let Ok(p) = result {
-        dbg!(p);
-    } else {
-        println!("Err");
-    }
+    // // Result
+    // let p = PersonType::Pupil(Person {
+    //     age: 15,
+    //     name: "A".to_string(),
+    // });
+    // let result = function_result(p);
+    // if let Ok(p) = result {
+    //     dbg!(p);
+    // } else {
+    //     println!("Err");
+    // }
 
-    // Option
-    let op: Option<i32> = None;
-    // 1
-    if let Some(v) = op {
-        println!("Value: {}", v);
-    } else {
-        println!("Err");
-    }
-    // 2
-    let value = match op {
-        Some(v) => v,
-        None => 0,
-    };
-    // 3
-    let value2: i32 = op.unwrap_or(0);
+    // // Option
+    // let op: Option<i32> = None;
+    // // 1
+    // if let Some(v) = op {
+    //     println!("Value: {}", v);
+    // } else {
+    //     println!("Err");
+    // }
+    // // 2
+    // let value = match op {
+    //     Some(v) => v,
+    //     None => 0,
+    // };
+    // // 3
+    // let value2: i32 = op.unwrap_or(0);
 
-    println!("value la {}", value2);
+    // println!("value la {}", value2);
+
+    let mut r = 9;
+    let mut r1 = Rc::new(r);
+    let r2 = Rc::clone(&r1);
+    let r3 = Rc::clone(&r1);
+
+    println!("r {}", r);
+    println!("r1 {}", r1);
+    println!("r2 {}", r2);
+    println!("r3 {}", r3);
+
+    r += 4;
+    *r1 = 9;
+
+    println!("r {}", r);
+    println!("r1 {}", r1);
+    println!("r2 {}", r2);
+    println!("r3 {}", r3);
 }
 
 fn function_result(person: PersonType) -> Result<Person, String> {
