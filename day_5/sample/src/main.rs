@@ -1,6 +1,7 @@
 use std::{
     cell::{Cell, Ref, RefCell},
     mem,
+    ops::DerefMut,
     rc::{Rc, Weak},
     sync::Arc,
     thread,
@@ -32,7 +33,7 @@ impl Person for Student {
 #[derive(Debug)]
 struct Teacher {
     name: String,
-    coworker: Option<Weak<Teacher>>,
+    coworker: Option<Weak<RefCell<Teacher>>>,
 }
 
 impl Teacher {
@@ -101,14 +102,32 @@ fn describe_ref_cell() {
 }
 
 fn describe_weak_refence() {
-    let a = RefCell::new(Teacher::new("A".to_string()));
-    let b = RefCell::new(Teacher::new("B".to_string()));
+    let a = Rc::new(RefCell::new(Teacher::new("A".to_string())));
+    let b = Rc::new(RefCell::new(Teacher::new("B".to_string())));
 
-    a.borrow_mut().coworker = Some(Rc::downgrade(&Rc::new(b.into_inner())));
-    // b.borrow_mut().coworker = Some(Rc::downgrade(&Rc::new(a.into_inner())));
+    let weak_a = Rc::downgrade(&a);
+
+    b.borrow_mut().coworker = Some(weak_a);
+    a.borrow_mut().coworker = Some(Rc::downgrade(&b));
 
     println!("A: {:?}", a);
-    // println!("B: {:?}", b);
+    match &a.borrow().coworker {
+        Some(teacher) => println!("Coworker of a = {:?}", teacher.upgrade().unwrap()),
+        None => println!("A does not have coworker"),
+    };
+    mem::drop(a);
+
+    match &b.borrow().coworker {
+        Some(teacher) => {
+            if let Some(c) = teacher.upgrade() {
+                println!("Coworker of b = {:?}", c);
+            } else {
+                println!("B does not have coworker");
+            }
+        }
+        None => println!("B does not have coworker"),
+    };
+    println!("B: {:?}", b);
 }
 
 fn main() {
