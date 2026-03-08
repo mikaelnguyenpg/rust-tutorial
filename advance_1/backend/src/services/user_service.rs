@@ -1,28 +1,27 @@
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use utoipa::ToSchema;
 
-#[derive(Deserialize, Debug, Clone, Serialize, ToSchema)]
-pub struct User {
-    pub id: u32,
-    pub name: String,
-    pub email: String,
-}
+use crate::models::user::{RequestUser, User};
 
 static USER_STORAGE: Mutex<Vec<User>> = Mutex::new(vec![]);
 
-pub fn create_user(user: &User) -> Result<(), String> {
-    let mut storage = USER_STORAGE.lock().map_err(|e| e.to_string())?;
+pub fn create_user(user: RequestUser) -> Result<usize, String> {
+    let mut storage: std::sync::MutexGuard<'_, Vec<User>> =
+        USER_STORAGE.lock().map_err(|e| e.to_string())?;
+    let user_id = storage.iter().len() + 1;
 
-    if storage.iter().any(|u| u.id == user.id) {
-        return Err(format!("User with id {} already exists", user.id));
+    if storage.iter().any(|u| u.id == user_id) {
+        return Err(format!("User with id {} already exists", user_id));
     }
 
-    storage.push(user.clone());
-    Ok(())
+    storage.push(User {
+        id: user_id,
+        name: user.name,
+        email: user.email,
+    });
+    Ok(user_id)
 }
 
-pub fn get_user(id: u32) -> Option<&'static User> {
+pub fn get_user(id: usize) -> Option<&'static User> {
     // For returning owned data instead, see note below
     USER_STORAGE
         .lock()
@@ -37,7 +36,7 @@ pub fn get_all_users() -> Vec<User> {
     USER_STORAGE.lock().unwrap().clone()
 }
 
-pub fn update_user(id: u32, name: Option<String>, email: Option<String>) -> Result<(), String> {
+pub fn update_user(id: usize, name: Option<String>, email: Option<String>) -> Result<(), String> {
     let mut storage = USER_STORAGE.lock().map_err(|e| e.to_string())?;
 
     let user = storage
@@ -54,7 +53,7 @@ pub fn update_user(id: u32, name: Option<String>, email: Option<String>) -> Resu
     Ok(())
 }
 
-pub fn delete_user(id: u32) -> Result<(), String> {
+pub fn delete_user(id: usize) -> Result<(), String> {
     let mut storage = USER_STORAGE.lock().map_err(|e| e.to_string())?;
 
     let pos = storage
