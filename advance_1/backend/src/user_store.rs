@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use utoipa::ToSchema;
 
-#[derive(Deserialize, Debug, Clone, Serialize)]
+#[derive(Deserialize, Debug, Clone, Serialize, ToSchema)]
 pub struct User {
     pub id: u32,
     pub name: String,

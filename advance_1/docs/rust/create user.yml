@@ -10,9 +10,9 @@ http:
     type: json
     data: |-
       {
-        "id":2,
+        "id":22,
         "name": "The first user",
-        "email": "user@email.com"
+        "email": "useremail.com"
       }
   auth: inherit
 
