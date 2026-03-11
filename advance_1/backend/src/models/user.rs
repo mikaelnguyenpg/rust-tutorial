@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -10,9 +11,9 @@ pub struct RequestUser {
     pub email: String,
 }
 
-#[derive(Deserialize, Debug, Clone, Serialize, ToSchema)]
+#[derive(Deserialize, Debug, Clone, Serialize, ToSchema, FromRow)]
 pub struct User {
-    pub id: usize,
+    pub id: i32,
     pub name: String,
-    pub email: String,
+    pub email: Option<String>,
 }

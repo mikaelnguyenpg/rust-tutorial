@@ -15,7 +15,7 @@ use crate::services::user_service;
     ),
     tag = "Users"
 )]
-pub async fn create_user(Json(user): Json<RequestUser>) -> Json<Response<usize>> {
+pub async fn create_user(Json(user): Json<RequestUser>) -> Json<Response<i32>> {
     if let Err(e) = user.validate() {
         return Json(Response {
             message: e.to_string(),
@@ -23,7 +23,7 @@ pub async fn create_user(Json(user): Json<RequestUser>) -> Json<Response<usize>>
         });
     }
 
-    let ret = user_service::create_user(user);
+    let ret = user_service::create_user(user).await;
     let response = match ret {
         Ok(uid) => Response {
             message: String::from("Created"),
@@ -75,11 +75,11 @@ pub async fn edit_user(Path(id): Path<usize>, Json(user): Json<RequestUser>) -> 
     ),
     tag = "Users"
 )]
-pub async fn get_user_detail(Path(id): Path<usize>) -> Json<Response<User>> {
-    let user = user_service::get_user(id);
+pub async fn get_user_detail(Path(id): Path<i32>) -> Json<Response<User>> {
+    let user = user_service::get_user(id).await;
     Json(Response {
         message: format!("Result for user_id: {}", id),
-        value: user.cloned(),
+        value: user,
     })
 }
 
