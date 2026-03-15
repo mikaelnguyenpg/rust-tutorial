@@ -42,14 +42,17 @@ impl UserRepository {
     pub async fn update(&self, id: i32, updated: RequestUser) -> Result<(), sqlx::Error> {
         let mut db = self.tx.lock().await;
 
-        _ = sqlx::query("UPDATE users_demo SET email = $1, name = $2 WHERE id = $3")
+        let ret = sqlx::query("UPDATE users_demo SET email = $1, name = $2 WHERE id = $3")
             .bind(updated.email)
             .bind(updated.name)
             .bind(id)
             .execute(&mut *db.as_mut())
-            .await;
+            .await?;
 
-        Ok(())
+        if ret.rows_affected() == 1 {
+            return Ok(());
+        }
+        Err(sqlx::Error::RowNotFound)
     }
 
     pub async fn get_all(&self) -> Option<Vec<User>> {

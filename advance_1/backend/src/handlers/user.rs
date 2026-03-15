@@ -1,12 +1,10 @@
 use axum::Json;
 use axum::extract::{Extension, Path};
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use serde_json::json;
 use validator::Validate;
 
 use crate::db::DbTransaction;
-use crate::models::common::Response;
+use crate::models::common::{ApiResult, Response};
 use crate::models::user::{RequestUser, User};
 use crate::services::user_service::UserService;
 
@@ -22,26 +20,13 @@ use crate::services::user_service::UserService;
 pub async fn create_user(
     Extension(tx): Extension<DbTransaction>,
     Json(user): Json<RequestUser>,
-) -> Json<Response<i32>> {
+) -> ApiResult<i32> {
     if let Err(e) = user.validate() {
-        return Json(Response {
-            message: e.to_string(),
-            value: None,
-        });
+        return Response::err(StatusCode::BAD_REQUEST, e.to_string());
     }
-    let user_service = UserService::new(tx);
-    let ret = user_service.create_user(user).await;
-    let response = match ret {
-        Ok(uid) => Response {
-            message: String::from("Created"),
-            value: Some(uid),
-        },
-        Err(msg) => Response {
-            message: msg,
-            value: None,
-        },
-    };
-    Json(response)
+
+    let ret = UserService::new(tx).create_user(user).await;
+    Response::from_result(ret)
 }
 
 #[utoipa::path(
@@ -60,22 +45,9 @@ pub async fn edit_user(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
     Json(user): Json<RequestUser>,
-) -> impl IntoResponse {
-    let user_service = UserService::new(tx);
-    let ret: Result<(), String> = user_service.update_user(id, user).await;
-    // let respone = match ret {
-    //     Ok(()) => Response {
-    //         message: String::from("Updated"),
-    //         value: None,
-    //     },
-    //     Err(msg) => Response {
-    //         message: msg,
-    //         value: None,
-    //     },
-    // };
-    // Json(respone);
-    // (StatusCode::OK, Json(json!({ "message": "Updated" })))
-    (StatusCode::OK, Json(json!({ "error": "Testing" })))
+) -> ApiResult<()> {
+    let ret: Result<(), String> = UserService::new(tx).update_user(id, user).await;
+    Response::from_result(ret)
 }
 
 #[utoipa::path(
@@ -92,13 +64,9 @@ pub async fn edit_user(
 pub async fn get_user_detail(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
-) -> Json<Response<User>> {
-    let user_service = UserService::new(tx);
-    let user = user_service.get_user(id).await;
-    Json(Response {
-        message: format!("Result for user_id: {}", id),
-        value: user,
-    })
+) -> ApiResult<User> {
+    let user = UserService::new(tx).get_user(id).await;
+    Response::from_optional(user)
 }
 
 #[utoipa::path(
@@ -117,20 +85,9 @@ pub async fn get_user_detail(
 pub async fn delete_user(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
-) -> Json<Response<()>> {
-    let user_service = UserService::new(tx);
-    let ret = user_service.delete_user(id).await;
-    let respone = match ret {
-        Ok(()) => Response {
-            message: String::from("Deleted"),
-            value: None,
-        },
-        Err(msg) => Response {
-            message: msg,
-            value: None,
-        },
-    };
-    Json(respone)
+) -> ApiResult<()> {
+    let ret = UserService::new(tx).delete_user(id).await;
+    Response::from_result(ret)
 }
 
 #[utoipa::path(
@@ -143,11 +100,10 @@ pub async fn delete_user(
     ),
     tag = "Users"
 )]
-pub async fn get_all_users(Extension(tx): Extension<DbTransaction>) -> Json<Response<Vec<User>>> {
-    let user_service = UserService::new(tx);
-    let ret = user_service.get_all_users().await;
-    Json(Response {
-        message: String::from("Result"),
-        value: ret,
-    })
+pub async fn get_all_users(Extension(tx): Extension<DbTransaction>) -> ApiResult<Vec<User>> {
+    let ret = UserService::new(tx).get_all_users().await;
+    match ret {
+        Some(users) => Response::ok(users),
+        None => Response::ok(vec![]),
+    }
 }
