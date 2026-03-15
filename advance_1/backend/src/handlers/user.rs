@@ -1,10 +1,14 @@
 use axum::Json;
-use axum::extract::Path;
+use axum::extract::{Extension, Path};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use serde_json::json;
 use validator::Validate;
 
+use crate::db::DbTransaction;
 use crate::models::common::Response;
 use crate::models::user::{RequestUser, User};
-use crate::services::user_service;
+use crate::services::user_service::UserService;
 
 #[utoipa::path(
     post,
@@ -15,15 +19,18 @@ use crate::services::user_service;
     ),
     tag = "Users"
 )]
-pub async fn create_user(Json(user): Json<RequestUser>) -> Json<Response<i32>> {
+pub async fn create_user(
+    Extension(tx): Extension<DbTransaction>,
+    Json(user): Json<RequestUser>,
+) -> Json<Response<i32>> {
     if let Err(e) = user.validate() {
         return Json(Response {
             message: e.to_string(),
             value: None,
         });
     }
-
-    let ret = user_service::create_user(user).await;
+    let user_service = UserService::new(tx);
+    let ret = user_service.create_user(user).await;
     let response = match ret {
         Ok(uid) => Response {
             message: String::from("Created"),
@@ -49,19 +56,26 @@ pub async fn create_user(Json(user): Json<RequestUser>) -> Json<Response<i32>> {
     ),
     tag = "Users"
 )]
-pub async fn edit_user(Path(id): Path<usize>, Json(user): Json<RequestUser>) -> Json<Response<()>> {
-    let ret = user_service::update_user(id, Some(user.name), Some(user.email));
-    let respone = match ret {
-        Ok(()) => Response {
-            message: String::from("Updated"),
-            value: None,
-        },
-        Err(msg) => Response {
-            message: msg,
-            value: None,
-        },
-    };
-    Json(respone)
+pub async fn edit_user(
+    Path(id): Path<i32>,
+    Extension(tx): Extension<DbTransaction>,
+    Json(user): Json<RequestUser>,
+) -> impl IntoResponse {
+    let user_service = UserService::new(tx);
+    let ret: Result<(), String> = user_service.update_user(id, user).await;
+    // let respone = match ret {
+    //     Ok(()) => Response {
+    //         message: String::from("Updated"),
+    //         value: None,
+    //     },
+    //     Err(msg) => Response {
+    //         message: msg,
+    //         value: None,
+    //     },
+    // };
+    // Json(respone);
+    // (StatusCode::OK, Json(json!({ "message": "Updated" })))
+    (StatusCode::OK, Json(json!({ "error": "Testing" })))
 }
 
 #[utoipa::path(
@@ -75,8 +89,12 @@ pub async fn edit_user(Path(id): Path<usize>, Json(user): Json<RequestUser>) -> 
     ),
     tag = "Users"
 )]
-pub async fn get_user_detail(Path(id): Path<i32>) -> Json<Response<User>> {
-    let user = user_service::get_user(id).await;
+pub async fn get_user_detail(
+    Path(id): Path<i32>,
+    Extension(tx): Extension<DbTransaction>,
+) -> Json<Response<User>> {
+    let user_service = UserService::new(tx);
+    let user = user_service.get_user(id).await;
     Json(Response {
         message: format!("Result for user_id: {}", id),
         value: user,
@@ -96,8 +114,12 @@ pub async fn get_user_detail(Path(id): Path<i32>) -> Json<Response<User>> {
     ),
     tag = "Users"
 )]
-pub async fn delete_user(Path(id): Path<usize>) -> Json<Response<()>> {
-    let ret = user_service::delete_user(id);
+pub async fn delete_user(
+    Path(id): Path<i32>,
+    Extension(tx): Extension<DbTransaction>,
+) -> Json<Response<()>> {
+    let user_service = UserService::new(tx);
+    let ret = user_service.delete_user(id).await;
     let respone = match ret {
         Ok(()) => Response {
             message: String::from("Deleted"),
@@ -121,10 +143,11 @@ pub async fn delete_user(Path(id): Path<usize>) -> Json<Response<()>> {
     ),
     tag = "Users"
 )]
-pub async fn get_all_users() -> Json<Response<Vec<User>>> {
-    let ret = user_service::get_all_users();
+pub async fn get_all_users(Extension(tx): Extension<DbTransaction>) -> Json<Response<Vec<User>>> {
+    let user_service = UserService::new(tx);
+    let ret = user_service.get_all_users().await;
     Json(Response {
         message: String::from("Result"),
-        value: Some(ret),
+        value: ret,
     })
 }

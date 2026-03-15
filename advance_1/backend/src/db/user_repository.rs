@@ -1,25 +1,19 @@
-use crate::models::user::{RequestUser, User};
-use sqlx::postgres::PgPoolOptions;
+use crate::{
+    db::DbTransaction,
+    models::user::{RequestUser, User},
+};
 
 pub struct UserRepository {
-    url: String,
-    max_connection: u32,
+    tx: DbTransaction,
 }
 
 impl UserRepository {
-    pub fn new() -> Self {
-        UserRepository {
-            url: dotenv::var("DATABASE_URL").expect("DATABASE_URL must defined"),
-            max_connection: 3,
-        }
+    pub fn new(tx: DbTransaction) -> Self {
+        UserRepository { tx }
     }
 
     pub async fn create(&self, user: RequestUser) -> Result<i32, sqlx::Error> {
-        // connect to db
-        let db = PgPoolOptions::new()
-            .max_connections(self.max_connection)
-            .connect(&self.url)
-            .await?;
+        let mut db = self.tx.lock().await;
 
         // execute sql to insert user to user table
         let row = sqlx::query!(
@@ -27,7 +21,7 @@ impl UserRepository {
             user.name,
             user.email
         )
-        .fetch_one(&db)
+        .fetch_one(&mut *db.as_mut())
         .await?;
 
         // return user_id
@@ -35,16 +29,50 @@ impl UserRepository {
     }
 
     pub async fn get_by_id(&self, id: i32) -> Result<User, sqlx::Error> {
-        let db = PgPoolOptions::new()
-            .max_connections(self.max_connection)
-            .connect(&self.url)
-            .await?;
+        let mut db = self.tx.lock().await;
 
         let user = sqlx::query_as::<_, User>("SELECT * FROM users_demo WHERE id = $1")
             .bind(id)
-            .fetch_one(&db)
+            .fetch_one(&mut *db.as_mut())
             .await?;
 
         Ok(user)
+    }
+
+    pub async fn update(&self, id: i32, updated: RequestUser) -> Result<(), sqlx::Error> {
+        let mut db = self.tx.lock().await;
+
+        _ = sqlx::query("UPDATE users_demo SET email = $1, name = $2 WHERE id = $3")
+            .bind(updated.email)
+            .bind(updated.name)
+            .bind(id)
+            .execute(&mut *db.as_mut())
+            .await;
+
+        Ok(())
+    }
+
+    pub async fn get_all(&self) -> Option<Vec<User>> {
+        let mut db = self.tx.lock().await;
+
+        let result = sqlx::query_as::<_, User>("SELECT * FROM users_demo")
+            .fetch_all(&mut *db.as_mut())
+            .await;
+
+        match result {
+            Err(_) => None,
+            Ok(users) => Some(users),
+        }
+    }
+
+    pub async fn delete(&self, id: i32) -> Result<(), sqlx::Error> {
+        let mut db = self.tx.lock().await;
+
+        _ = sqlx::query("DELETE FROM users_demo WHERE id = $1")
+            .bind(id)
+            .execute(&mut *db.as_mut())
+            .await?;
+
+        Ok(())
     }
 }

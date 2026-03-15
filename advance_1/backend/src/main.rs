@@ -4,7 +4,7 @@ mod models;
 mod services;
 
 use axum::{
-    Router,
+    Router, middleware,
     routing::{delete, get, post, put},
 };
 use utoipa::OpenApi;
@@ -38,6 +38,12 @@ struct ApiDoc;
 
 #[tokio::main]
 async fn main() {
+    // create connection pool
+    let pool = db::Db::new()
+        .connect()
+        .await
+        .expect("Failed to connect to database");
+
     // build our application with a single route
     let app = Router::new()
         // user routers
@@ -48,8 +54,13 @@ async fn main() {
         .route("/api/users", get(get_all_users))
         // product routers
         //
+        .route_layer(middleware::from_fn_with_state(
+            pool.clone(),
+            db::start_transaction,
+        ))
         // swagger - openapi
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .with_state(pool);
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

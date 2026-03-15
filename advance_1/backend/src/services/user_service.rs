@@ -1,61 +1,57 @@
-use std::sync::Mutex;
-
 use crate::{
-    db::user_repository::UserRepository,
+    db::{DbTransaction, user_repository::UserRepository},
     models::user::{RequestUser, User},
 };
 
-static USER_STORAGE: Mutex<Vec<User>> = Mutex::new(vec![]);
-
-pub async fn create_user(user: RequestUser) -> Result<i32, String> {
-    let user_repo = UserRepository::new();
-    let result = user_repo.create(user).await;
-
-    match result {
-        Ok(user_id) => Ok(user_id),
-        Err(e) => Err(e.to_string()),
-    }
+pub struct UserService {
+    user_repo: UserRepository,
 }
 
-pub async fn get_user(id: i32) -> Option<User> {
-    let user_repo = UserRepository::new();
-    let result = user_repo.get_by_id(id).await;
-
-    match result {
-        Ok(user) => Some(user),
-        Err(_) => None,
+impl UserService {
+    pub fn new(tx: DbTransaction) -> Self {
+        UserService {
+            user_repo: UserRepository::new(tx),
+        }
     }
-}
 
-pub fn get_all_users() -> Vec<User> {
-    USER_STORAGE.lock().unwrap().clone()
-}
+    pub async fn create_user(&self, user: RequestUser) -> Result<i32, String> {
+        let result = self.user_repo.create(user).await;
 
-pub fn update_user(id: usize, name: Option<String>, email: Option<String>) -> Result<(), String> {
-    let mut storage = USER_STORAGE.lock().map_err(|e| e.to_string())?;
-
-    let user = storage
-        .iter_mut()
-        .find(|u| id == u.id as usize)
-        .ok_or(format!("User with id {} not found", id))?;
-
-    if let Some(name) = name {
-        user.name = name;
+        match result {
+            Ok(user_id) => Ok(user_id),
+            Err(e) => Err(e.to_string()),
+        }
     }
-    if let Some(email) = email {
-        user.email = Some(email);
+
+    pub async fn get_user(&self, id: i32) -> Option<User> {
+        let result = self.user_repo.get_by_id(id).await;
+
+        match result {
+            Ok(user) => Some(user),
+            Err(_) => None,
+        }
     }
-    Ok(())
-}
 
-pub fn delete_user(id: usize) -> Result<(), String> {
-    let mut storage = USER_STORAGE.lock().map_err(|e| e.to_string())?;
+    pub async fn get_all_users(&self) -> Option<Vec<User>> {
+        self.user_repo.get_all().await
+    }
 
-    let pos = storage
-        .iter()
-        .position(|u| id == u.id as usize)
-        .ok_or(format!("User with id {} not found", id))?;
+    pub async fn update_user(&self, id: i32, updated: RequestUser) -> Result<(), String> {
+        let result = self.user_repo.update(id, updated).await;
 
-    storage.remove(pos);
-    Ok(())
+        match result {
+            Ok(()) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+        // return Err(String::from("Test rollback"));
+    }
+
+    pub async fn delete_user(&self, id: i32) -> Result<(), String> {
+        let result = self.user_repo.delete(id).await;
+
+        match result {
+            Ok(()) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
 }
