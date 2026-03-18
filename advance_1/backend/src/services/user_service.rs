@@ -15,12 +15,7 @@ impl UserService {
     }
 
     pub async fn create_user(&self, user: RequestUser) -> Result<i32, String> {
-        let result = self.user_repo.create(user).await;
-
-        match result {
-            Ok(user_id) => Ok(user_id),
-            Err(e) => Err(e.to_string()),
-        }
+        self.user_repo.create(user).await.map_err(|e| e.to_string())
     }
 
     pub async fn get_user(&self, id: i32) -> Option<User> {
@@ -37,21 +32,13 @@ impl UserService {
     }
 
     pub async fn update_user(&self, id: i32, updated: RequestUser) -> Result<(), String> {
-        let result = self.user_repo.update(id, updated).await;
-
-        match result {
-            Ok(()) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
-        // return Err(String::from("Test rollback"));
+        self.user_repo
+            .update(id, updated)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn delete_user(&self, id: i32) -> Result<(), String> {
-        let result = self.user_repo.delete(id).await;
-
-        match result {
-            Ok(()) => Ok(()),
-            Err(e) => Err(e.to_string()),
-        }
+        self.user_repo.delete(id).await.map_err(|e| e.to_string())
     }
 }

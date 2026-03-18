@@ -63,10 +63,13 @@ pub async fn start_transaction(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         println!("Commmited transaction");
     } else {
-        tx.rollback()
+        _ = tx
+            .rollback()
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
         println!("Rollback transaction");
+        return Err(StatusCode::RESET_CONTENT);
     }
 
     Ok(response)
