@@ -26,3 +26,5 @@ sqlx = { version = "*", features = ["postgres", "runtime-tokio"] }
 
 # Environment variable
 dotenv = { version = "*" }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+chrono = "0.4.44"

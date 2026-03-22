@@ -39,6 +39,17 @@ impl UserRepository {
         Ok(user)
     }
 
+    pub async fn get_by_name(&self, name: String) -> Result<User, sqlx::Error> {
+        let mut db = self.tx.lock().await;
+
+        let user = sqlx::query_as::<_, User>("SELECT * FROM users_demo WHERE name = $1")
+            .bind(name)
+            .fetch_one(&mut *db.as_mut())
+            .await?;
+
+        Ok(user)
+    }
+
     pub async fn update(&self, id: i32, updated: RequestUser) -> Result<(), sqlx::Error> {
         let mut db = self.tx.lock().await;
 

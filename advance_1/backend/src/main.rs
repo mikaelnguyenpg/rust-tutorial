@@ -1,16 +1,23 @@
 mod db;
 mod handlers;
+mod middleware;
 mod models;
 mod services;
 
 use axum::{
-    Router, middleware,
+    Router,
+    middleware::{from_fn, from_fn_with_state},
     routing::{delete, get, post, put},
 };
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
-use crate::handlers::user::{create_user, delete_user, edit_user, get_all_users, get_user_detail};
+use crate::{
+    handlers::{
+        auth::login,
+        user::{create_user, delete_user, edit_user, get_all_users, get_user_detail},
+    },
+    middleware::SecurityAddon,
+};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -19,9 +26,11 @@ use crate::handlers::user::{create_user, delete_user, edit_user, get_all_users, 
         crate::handlers::user::edit_user,
         crate::handlers::user::delete_user,
         crate::handlers::user::get_user_detail,
-        crate::handlers::user::get_all_users
+        crate::handlers::user::get_all_users,
+        crate::handlers::auth::login
     ),
     tags(
+        (name = "Authentication", description = "Authentication endpoints"),
         (name = "Users", description = "User management endpoints")
     ),
     info(
@@ -33,6 +42,7 @@ use crate::handlers::user::{create_user, delete_user, edit_user, get_all_users, 
             email = "support@example.com"
         )
     ),
+    modifiers(&SecurityAddon)
 )]
 struct ApiDoc;
 
@@ -52,14 +62,16 @@ async fn main() {
         .route("/api/users/{id}", get(get_user_detail))
         .route("/api/users/{id}", delete(delete_user))
         .route("/api/users", get(get_all_users))
-        // product routers
-        //
-        .route_layer(middleware::from_fn_with_state(
+        // auth routers
+        .route("/api/auth/login", post(login))
+        // middleware
+        .route_layer(from_fn(middleware::authentication))
+        .route_layer(from_fn_with_state(
             pool.clone(),
-            db::start_transaction,
+            middleware::start_transaction,
         ))
         // swagger - openapi
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+        .merge(middleware::swagger_ui(ApiDoc::openapi()));
 
     // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
