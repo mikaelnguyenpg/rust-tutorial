@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users_demo (
     email TEXT
 );
 
-ALTER TABLE users_demo ADD password TEXT;
-CREATE INDEX user_demo__name_index ON users_demo (name);
+-- ALTER TABLE users_demo ADD password TEXT;
+CREATE INDEX IF NOT EXISTS user_demo__name_index ON users_demo (name);
 
 

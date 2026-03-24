@@ -2,8 +2,8 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:18
-    container_name: postgres-db
+    image: postgres:16-alpine # stable & less unexpected error than 18
+    container_name: mypostgres
     restart: always
     environment:
       POSTGRES_USER: admin
