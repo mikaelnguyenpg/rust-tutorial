@@ -43,6 +43,8 @@
             cargo-watch    # auto-reload khi code thay đổi
             cargo-expand   # xem macro expansion
             cargo-audit    # check security vulnerabilities
+            # vscode-extensions.vadimcn.vscode-lldb
+            lldb
           ];
 
           # Environment variables

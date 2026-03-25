@@ -22,13 +22,16 @@ cluster-config: ## Tùy chỉnh config
 	@echo "unix_socket_directories = '$(shell pwd)/.pgdata'" >> .pgdata/postgresql.conf
 
 pg-start: ## Bật Postgres local
-	@pg_ctl status > /dev/null 2>&1 || pg_ctl start -l $(PGDATA)/postgres.log -o "-c listen_addresses='localhost' -p 5432"
+	pg_ctl -D "$(PGDATA)" \
+		  -l "$(PGDATA)/postgres.log" \
+		  -o "-c listen_addresses='localhost' -p 5432" \
+		  start
 
 pg-stop: ## Tắt Postgres local
-	@pg_ctl stop
+	@pg_ctl -D "$(PGDATA)" stop
 
 pg-status: ## Xem trạng thái Postgres
-	@pg_ctl status
+	@pg_ctl -D "$(PGDATA)" status
 
 pg-isready: ## Xem Postgres có sẵn sàng cho kết nối không
 	@pg_isready -h localhost -p 5432
@@ -75,6 +78,9 @@ prepare: ## Tạo sqlx offline cache cho macro (Cần khi build CI)
 
 check: ## Kiểm tra lỗi cú pháp và Type-safe (Bao gồm SQL check)
 	cd backend && cargo check
+
+build:
+	cd backend && cargo clean && cargo build
 
 watch: ## Chạy server với chế độ auto-reload
 	cd backend && cargo watch -x run
