@@ -8,6 +8,21 @@
 2. Kiểm tra và sửa lỗi tại sao api get_users lại return là []
 3. Thiết kế 2 tables: user và article theo yêu cầu từ file excalidraw
 
+```plaintext
+Dự án: Xây dựng một WebApp đưa tin giống Facebook
+
+- Homepage: liệt kê tất cả các bản tin của người dùng
+dưới dạng là public
+- Nếu user login: liệt kê hết tất cả các dạng bản tin
+
+- User (người dùng)
+    - ...
+- Article (bản tin)
+    - time_created
+    - visibility: public / unlisted / draft
+    - created_by_user
+```
+
 #### Answers
 
 ##### 1. Thực hành thêm column
@@ -107,5 +122,5 @@ Further issue:
 - Add required-password to APIs --> ✅
 - Remove Authentication/security from `POST /api/user` --> ✅
 - Remove required-password to 4 APIs --> ✅
-- Add Authentication/security to 4 APIs
+- Add Authentication/security to 4 APIs --> ✅
 - Remove returned-password from `GET /api/users`

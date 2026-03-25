@@ -47,7 +47,7 @@ pub async fn create_user(
 pub async fn edit_user(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
-    Extension(auth_user): Option<Extension<User>>,
+    auth_user: Option<Extension<User>>,
     Json(user): Json<RequestUserUpdate>,
 ) -> ApiResult<()> {
     if auth_user.is_none() {
@@ -67,12 +67,20 @@ pub async fn edit_user(
     responses(
         (status = 200, description = "User detail", body = Response<User>),
     ),
-    tag = "Users"
+    tag = "Users",
+    security(
+        ("Bearer" = [])
+    )
 )]
 pub async fn get_user_detail(
     Path(id): Path<i32>,
+    auth_user: Option<Extension<User>>,
     Extension(tx): Extension<DbTransaction>,
 ) -> ApiResult<User> {
+    if auth_user.is_none() {
+        return Response::err(StatusCode::UNAUTHORIZED, "Unauthorized".to_string());
+    }
+
     let user = UserService::new(tx).get_user(id).await;
     Response::from_optional(user)
 }
@@ -88,12 +96,20 @@ pub async fn get_user_detail(
         (status = 404, description = "User not found"),
         (status = 401, description = "Unauthorized")
     ),
-    tag = "Users"
+    tag = "Users",
+    security(
+        ("Bearer" = [])
+    )
 )]
 pub async fn delete_user(
     Path(id): Path<i32>,
+    auth_user: Option<Extension<User>>,
     Extension(tx): Extension<DbTransaction>,
 ) -> ApiResult<()> {
+    if auth_user.is_none() {
+        return Response::err(StatusCode::UNAUTHORIZED, "Unauthorized".to_string());
+    }
+
     let ret = UserService::new(tx).delete_user(id).await;
     Response::from_result(ret)
 }
@@ -106,9 +122,19 @@ pub async fn delete_user(
         (status = 404, description = "User not found"),
         (status = 401, description = "Unauthorized")
     ),
-    tag = "Users"
+    tag = "Users",
+    security(
+        ("Bearer" = [])
+    )
 )]
-pub async fn get_all_users(Extension(tx): Extension<DbTransaction>) -> ApiResult<Vec<User>> {
+pub async fn get_all_users(
+    auth_user: Option<Extension<User>>,
+    Extension(tx): Extension<DbTransaction>
+) -> ApiResult<Vec<User>> {
+    if auth_user.is_none() {
+        return Response::err(StatusCode::UNAUTHORIZED, "Unauthorized".to_string());
+    }
+
     let ret = UserService::new(tx).get_all_users().await;
     match ret {
         Some(users) => Response::ok(users),
