@@ -124,3 +124,116 @@ Further issue:
 - Remove required-password to 4 APIs --> ✅
 - Add Authentication/security to 4 APIs --> ✅
 - Remove returned-password from `GET /api/users`
+
+##### 3. Thiết kế 2 tables: user và article theo yêu cầu từ file excalidraw
+
+Table “đơn giản” (Basic) cho User & Article
+
+###### 1) User (Basic)
+
+Mục tiêu: auth + xác định ownership (created_by_user).
+
+Các cột tối thiểu nên có:
+
+```plaintext
+- id (PK)
+- name (text)
+- email (unique, text) (để login tìm nhanh)
+- password_hash (text) (khuyến nghị; trong tutorial đang dùng password tạm thời nhưng về lâu dài nên hash)
+- created_at (timestamptz)
+- (tuỳ chọn) updated_at
+```
+
+Điều lưu ý quan trọng nhất cho User
+
+- email nên UNIQUE
+- password lưu dạng hash (đừng lưu plaintext)
+
+###### 2) Article (Basic)
+
+Mục tiêu: feed theo visibility + ownership theo created_by_user.
+
+Các cột tối thiểu nên có:
+
+```plaintext
+- id (PK)
+- created_by_user (FK → users.id)
+- time_created (timestamptz)
+- visibility (enum/text): public | unlisted | private | draft
+- title (text, nếu muốn feed dễ hiển thị)
+- content hoặc body (text)
+```
+
+Điều lưu ý quan trọng nhất cho Article
+
+- created_by_user phải có FK (đảm bảo không có “article mồ côi”)
+- visibility nên ràng buộc CHECK/enum để tránh giá trị sai
+- query feed phải lọc theo visibility & ownership đúng policy
+- Gợi ý query logic “homepage” theo policy:
+  - Anonymous: `WHERE visibility='public' ORDER BY time_created DESC`
+  - Logged-in user (my feed): `WHERE created_by_user = :uid AND visibility IN ('public','unlisted','draft') ORDER BY time_created DESC`
+
+###### Các query “cơ bản” hiện tại (dùng cho Basic design)
+
+Basic thì thường sẽ dùng các câu query/pattern này:
+
+1. Anonymous homepage (public feed)
+   `SELECT ... FROM articles WHERE visibility='public' ORDER BY time_created DESC;`
+2. My feed (user login)
+   `SELECT ... FROM articles WHERE created_by_user=:uid AND visibility IN ('public','unlisted','draft') ORDER BY time_created DESC;`
+3. Create article
+   `INSERT INTO articles(created_by_user, time_created, visibility, title, content) VALUES (...) RETURNING id;`
+4. Update article (owner)
+   `UPDATE articles SET ... WHERE id=:id AND created_by_user=:uid;`
+5. Delete article (owner)
+   `DELETE FROM articles WHERE id=:id AND created_by_user=:uid;`
+6. View article by id (public)
+   `SELECT ... FROM articles WHERE id=:id AND visibility='public';`
+7. View “unlisted/draft”
+   - Basic design (chỉ có visibility) thường sẽ không cấp quyền xem cho người khác, trừ khi là “owner” hoặc có token/link.
+   - Nếu policy “unlisted = link/token share”:
+     - lúc này cần thêm lookup theo token/link, tức là query sẽ khác (thường JOIN với bảng token).
+8. List articles by author (nếu có UI author profile)
+   `SELECT ... FROM articles WHERE created_by_user=:uid AND visibility='public' ORDER BY time_created DESC; (hoặc IN tùy login)`
+
+###### Basic này giải quyết được bao nhiêu % bài toán “giống Facebook”?
+
+- Nếu chấp nhận unlisted = chỉ chủ bài xem (không cần người khác xem qua link):
+  - Basic có thể đạt khoảng 70–80% cho phần “feed + visibility + CRUD + ownership”.
+
+- Với bài toán của hiện tại: unlisted = link/token share cho người khác xem
+  - Basic “chỉ visibility + created_by_user” chưa đủ để cho người khác xem unlisted bằng link.
+  - Trong trường hợp này, Basic thường đạt khoảng **50–60%**.
+
+###### 40–50% bài toán còn lại thường là gì?
+
+Phần còn lại rơi vào các nhóm sau:
+
+1. Unlisted link/token share (quyền xem dựa trên bí mật trong URL) ~20%
+
+- Cần bảng token/link (vd article_unlisted_links) hoặc ít nhất cơ chế lưu token và lookup token → article.
+- Cần query + validate token + expiry + revoke.
+
+2. Draft publish thành public/unlisted (versioning/publish workflow) ~10–20%
+
+- Basic kiểu “một row, visibility đổi trạng thái” là đơn giản (nhưng không giữ lịch sử).
+- Versioning đúng nghĩa (article_versions) thường tốn thêm.
+
+3. Performance & scale feed ~10–15%
+
+- Index đúng composite cho feed
+- Pagination (cursor-based) thay vì “fetch hết”
+- (sau này) caching, read replicas, v.v.
+
+4. Privacy/security & API contract ~5–10%
+
+- Tách entity/DTO để không lộ dữ liệu nhạy cảm
+- Return đúng 401/403 thay vì rollback/500 mơ hồ
+
+###### Basic có scale up tương lai được không?
+
+Khả dĩ. Sau này scale up theo hướng:
+
+- thêm bảng token để unlisted share thật
+- thêm bảng version để draft/publish chuẩn hơn
+- thêm index/pagination khi data lớn
