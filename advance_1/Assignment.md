@@ -10,6 +10,51 @@
 
 #### Answers
 
+##### 1. Thực hành thêm column
+
+Giải pháp:
+
+```sql
+-- add password to Schema
+CREATE TABLE IF NOT EXISTS users_demo (
+    id serial primary key,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL,
+    email TEXT
+);
+
+-- ALTER TABLE users_demo ADD password TEXT;
+CREATE INDEX IF NOT EXISTS user_demo__name_index ON users_demo (name);
+```
+
+Result:
+
+```bash
+$ psql "postgresql://admin:admin123@localhost:5432/mydatabase"
+psql (17.9)
+Type "help" for help.
+
+mydatabase=# \dt
+          List of relations
+ Schema |    Name    | Type  | Owner
+--------+------------+-------+-------
+ public | users_demo | table | admin
+(1 row)
+
+mydatabase=# \d users_demo
+                             Table "public.users_demo"
+  Column  |  Type   | Collation | Nullable |                Default
+----------+---------+-----------+----------+----------------------------------------
+ id       | integer |           | not null | nextval('users_demo_id_seq'::regclass)
+ name     | text    |           | not null |
+ password | text    |           | not null |
+ email    | text    |           |          |
+Indexes:
+    "users_demo_pkey" PRIMARY KEY, btree (id)
+    "user_demo__name_index" btree (name)
+
+```
+
 ##### 2.A. Kiểm tra tại sao api get_users lại return là []
 
 Checking Workflow:

@@ -39,13 +39,21 @@ pub async fn create_user(
     responses(
         (status = 200, description = "Updated"),
     ),
-    tag = "Users"
+    tag = "Users",
+    security(
+        ("Bearer" = [])
+    )
 )]
 pub async fn edit_user(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
+    Extension(auth_user): Option<Extension<User>>,
     Json(user): Json<RequestUserUpdate>,
 ) -> ApiResult<()> {
+    if auth_user.is_none() {
+        return Response::err(StatusCode::UNAUTHORIZED, "Unauthorized".to_string());
+    }
+
     let ret: Result<(), String> = UserService::new(tx).update_user(id, user).await;
     Response::from_result(ret)
 }
