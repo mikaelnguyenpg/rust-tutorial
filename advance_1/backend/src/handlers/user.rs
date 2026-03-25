@@ -5,7 +5,7 @@ use validator::Validate;
 
 use crate::db::DbTransaction;
 use crate::models::common::{ApiResult, Response};
-use crate::models::user::{RequestUser, User};
+use crate::models::user::{RequestUser, RequestUserUpdate, User};
 use crate::services::user_service::UserService;
 
 #[utoipa::path(
@@ -35,7 +35,7 @@ pub async fn create_user(
     params(
         ("id" = usize, Path, description = "User ID")
     ),
-    request_body = RequestUser,
+    request_body = RequestUserUpdate,
     responses(
         (status = 200, description = "Updated"),
     ),
@@ -44,7 +44,7 @@ pub async fn create_user(
 pub async fn edit_user(
     Path(id): Path<i32>,
     Extension(tx): Extension<DbTransaction>,
-    Json(user): Json<RequestUser>,
+    Json(user): Json<RequestUserUpdate>,
 ) -> ApiResult<()> {
     let ret: Result<(), String> = UserService::new(tx).update_user(id, user).await;
     Response::from_result(ret)

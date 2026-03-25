@@ -59,8 +59,8 @@ Further issue:
 
 **Fixing Phases**:
 
-- Add required-password to APIs
-- Remove Authentication/security from `POST /api/user`
-- Remove required-password to 4 APIs
+- Add required-password to APIs --> ✅
+- Remove Authentication/security from `POST /api/user` --> ✅
+- Remove required-password to 4 APIs --> ✅
 - Add Authentication/security to 4 APIs
 - Remove returned-password from `GET /api/users`

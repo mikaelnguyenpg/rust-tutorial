@@ -1,6 +1,6 @@
 use crate::{
     db::DbTransaction,
-    models::user::{RequestUser, User},
+    models::user::{RequestUser, RequestUserUpdate, User},
 };
 
 pub struct UserRepository {
@@ -51,7 +51,7 @@ impl UserRepository {
         Ok(user)
     }
 
-    pub async fn update(&self, id: i32, updated: RequestUser) -> Result<(), sqlx::Error> {
+    pub async fn update(&self, id: i32, updated: RequestUserUpdate) -> Result<(), sqlx::Error> {
         let mut db = self.tx.lock().await;
 
         let ret = sqlx::query("UPDATE users_demo SET email = $1, name = $2 WHERE id = $3")
