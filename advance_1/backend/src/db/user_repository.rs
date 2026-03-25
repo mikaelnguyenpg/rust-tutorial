@@ -17,9 +17,10 @@ impl UserRepository {
 
         // execute sql to insert user to user table
         let row = sqlx::query!(
-            "INSERT INTO users_demo (name, email) VALUES ($1, $2) RETURNING id",
+            "INSERT INTO users_demo (name, email, password) VALUES ($1, $2, $3) RETURNING id",
             user.name,
-            user.email
+            user.email,
+            user.password
         )
         .fetch_one(&mut *db.as_mut())
         .await?;

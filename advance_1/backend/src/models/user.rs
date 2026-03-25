@@ -9,6 +9,7 @@ pub struct RequestUser {
     pub name: String,
     #[validate(email)]
     pub email: String,
+    pub password: String,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize, ToSchema, FromRow)]
